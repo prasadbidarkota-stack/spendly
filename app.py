@@ -1,8 +1,10 @@
-from flask import Flask, render_template
+from flask import Flask, redirect, render_template, request, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from database.db import get_db, init_db, seed_db
 
 app = Flask(__name__)
+app.secret_key = "spendly-dev-secret-key"
 
 with app.app_context():
     init_db()
@@ -26,6 +28,11 @@ def register():
 @app.route("/login")
 def login():
     return render_template("login.html")
+
+
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
 
 
 # ------------------------------------------------------------------ #
