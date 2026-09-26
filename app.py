@@ -24,6 +24,9 @@ def landing():
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
+    if session.get("user_id"):
+        return redirect(url_for("profile"))
+
     if request.method == "GET":
         return render_template("register.html")
 
@@ -68,9 +71,45 @@ def register():
     return redirect(url_for("login"))
 
 
-@app.route("/login")
+@app.route("/login", methods=["GET", "POST"])
 def login():
-    return render_template("login.html")
+    if session.get("user_id"):
+        return redirect(url_for("profile"))
+
+    if request.method == "GET":
+        return render_template("login.html")
+
+    email = request.form.get("email", "").strip().lower()
+    password = request.form.get("password", "")
+
+    def fail(message, status):
+        return render_template("login.html", error=message, email=email), status
+
+    if not email or not password:
+        return fail("Email and password are required.", 400)
+
+    db = get_db()
+    try:
+        user = db.execute(
+            "SELECT id, name, password_hash FROM users WHERE email = ?", (email,)
+        ).fetchone()
+    finally:
+        db.close()
+
+    if user is None or not check_password_hash(user["password_hash"], password):
+        return fail("Invalid email or password.", 401)
+
+    session.clear()
+    session["user_id"] = user["id"]
+    session["user_name"] = user["name"]
+    return redirect(url_for("profile"))
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("You have been signed out.", "success")
+    return redirect(url_for("login"))
 
 
 @app.route("/terms")
@@ -86,11 +125,6 @@ def privacy():
 # ------------------------------------------------------------------ #
 # Placeholder routes — students will implement these                  #
 # ------------------------------------------------------------------ #
-
-@app.route("/logout")
-def logout():
-    return "Logout — coming in Step 3"
-
 
 @app.route("/profile")
 def profile():
